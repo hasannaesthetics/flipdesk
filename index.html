@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FlipDesk — Personal Resell Tracker</title>
+  <meta name="description" content="Personal tracker for device flipping — deals, leads, ad spend, and profit all in one place."/>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+
+  <!-- Firebase Modular SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE01tHL6EIf6feHM3FQHDXxEJC5po00GY",
+      authDomain: "flipdesk-21de0.firebaseapp.com",
+      projectId: "flipdesk-21de0",
+      storageBucket: "flipdesk-21de0.firebasestorage.app",
+      messagingSenderId: "783686854069",
+      appId: "1:783686854069:web:4bf77559046d88d93325fc",
+      measurementId: "G-2WRGB2BQBQ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    window.fbDb = getFirestore(app);
+    window.fbAuth = getAuth(app);
+    window.fbGoogleProvider = new GoogleAuthProvider();
+    window.fbDoc = doc;
+    window.fbSetDoc = setDoc;
+    window.fbOnSnapshot = onSnapshot;
+    window.fbGetDoc = getDoc;
+    window.fbSignInWithPopup = signInWithPopup;
+    window.fbSignOut = signOut;
+    window.fbOnAuthStateChanged = onAuthStateChanged;
+    window.fbSignInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.fbCreateUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    window.fbSendPasswordResetEmail = sendPasswordResetEmail;
+    window.fbUpdatePassword = updatePassword;
+
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     DUAL AUTH LOGIN SCREEN OVERLAY (Google + Email)
+════════════════════════════════════════════════════════ -->
+<div id="authScreen" class="lock-screen-overlay" style="display:flex;">
+  <div class="lock-card" style="max-width: 400px; padding: 28px 24px;">
+    <div class="logo-icon" style="width:44px; height:44px; margin: 0 auto 12px auto;">
+      <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
+        <rect x="1" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.9"/>
+        <rect x="12" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+        <rect x="1" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+        <rect x="12" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.15"/>
+      </svg>
+    </div>
+    <h2 class="lock-title" style="font-size:22px;">Welcome to FlipDesk</h2>
+    <p class="lock-desc" style="margin-bottom:20px;">Access your private business tracker & cloud data.</p>
+
+    <!-- Google Button -->
+    <button id="googleSignInOverlayBtn" class="google-login-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+      </svg>
+      <span>Sign in with Google</span>
+    </button>
+
+    <div class="auth-divider">
+      <span>OR WITH EMAIL</span>
+    </div>
+
+    <!-- Email Form -->
+    <form id="emailAuthForm" onsubmit="return false;" style="display:flex; flex-direction:column; gap:10px; width:100%;">
+      <input type="email" id="authEmail" class="lock-input" placeholder="Email address" style="text-align:left;" required />
+      <input type="password" id="authPassword" class="lock-input" placeholder="Password (min 6 chars)" style="text-align:left;" required />
+      
+      <div style="display:flex; gap:10px; margin-top:6px;">
+        <button id="emailSignInBtn" type="button" class="auth-action-btn primary">Sign In</button>
+        <button id="emailSignUpBtn" type="button" class="auth-action-btn secondary">Register</button>
+      </div>
+
+      <div style="text-align:right; margin-top:8px;">
+        <button id="forgotPasswordBtn" type="button" class="btn-link" style="font-size:12px; color:var(--text-2);">Forgot Password?</button>
+      </div>
+    </form>
+    
+    <p id="authErrorMsg" class="lock-error" style="display:none; margin-top:12px; margin-bottom:0;"></p>
+
+    <!-- Terms & Conditions Disclaimer -->
+    <p style="font-size:11px; color:var(--text-3); margin-top:18px; text-align:center; line-height:1.4;">
+      By signing up or signing in, you agree to our 
+      <button id="openTermsBtn" onclick="openTermsModal()" type="button" class="btn-link" style="color:var(--accent); font-size:11px; text-decoration:underline; cursor:pointer;">Terms and Conditions</button>.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: TERMS AND CONDITIONS
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="termsModal" style="z-index: 10005; position: fixed; inset: 0; background: rgba(8, 10, 13, 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+  <div class="modal" style="max-width: 540px; max-height: 85vh; display:flex; flex-direction:column; position:relative; background: var(--surface); border: 1px solid var(--border-hi); border-radius: 16px; padding: 24px;">
+    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2 style="font-size:18px; font-family:'Space Grotesk',sans-serif;">FlipDesk Terms &amp; Conditions</h2>
+      <button class="modal-close" id="closeTermsModal" onclick="closeTermsModal()" style="width:36px; height:36px; cursor:pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="terms-content" style="overflow-y:auto; padding-right:8px; font-size:13px; color:var(--text-2); line-height:1.6;">
+      <p style="margin-bottom:12px;"><strong>Last Updated: August 2026</strong></p>
+      
+      <h4 style="color:var(--text); margin-top:12px; margin-bottom:4px;">1. Acceptance of Terms</h4>
+      <p>By creating an account, signing in with Google or Email, or using FlipDesk, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the service.</p>
+
+      <h4 style="color:var(--text); margin-top:12px; margin-bottom:4px;">2. Description of Service</h4>
+      <p>FlipDesk provides a personal inventory, deal tracking, and financial monitoring web application for individual reselling operations.</p>
+
+      <h4 style="color:var(--text); margin-top:12px; margin-bottom:4px;">3. User Accounts &amp; Data Responsibility</h4>
+      <p>You are responsible for maintaining the confidentiality of your credentials. You agree that all deal data, customer leads, and ad spend entries logged into FlipDesk are accurate and lawfully owned by you.</p>
+
+      <h4 style="color:var(--text); margin-top:12px; margin-bottom:4px;">4. Privacy &amp; Cloud Storage</h4>
+      <p>FlipDesk uses Google Firebase to store and sync your tracking data across devices. We do not sell or share your private sales records with third parties.</p>
+
+      <h4 style="color:var(--text); margin-top:12px; margin-bottom:4px;">5. Limitation of Liability</h4>
+      <p>FlipDesk is provided "as-is" without warranty. FlipDesk shall not be liable for any indirect financial loss or business inventory discrepancies resulting from data entry errors or service interruptions.</p>
+
+      <h4 style="color:var(--text); margin-top:12px; margin-bottom:4px;">6. Contact &amp; Support</h4>
+      <p>For account inquiries or terms questions, contact support at <strong>muhdxhasan@gmail.com</strong>.</p>
+    </div>
+    <div class="modal-actions" style="margin-top:18px; display:flex; justify-content:flex-end;">
+      <button type="button" class="btn-primary" id="acceptTermsBtn" onclick="closeTermsModal()" style="width:100%; min-height:44px; justify-content:center;">I Agree &amp; Understand</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <rect x="1" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.9"/>
+        <rect x="12" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+        <rect x="1" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+        <rect x="12" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.15"/>
+      </svg>
+    </div>
+    <span class="logo-text">FlipDesk</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-item" data-tab="deals" id="nav-deals">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Deals</span>
+    </button>
+    <button class="nav-item" data-tab="inventory" id="nav-inventory">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <span>Inventory</span>
+    </button>
+    <button class="nav-item" data-tab="leads" id="nav-leads">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Leads</span>
+    </button>
+    <button class="nav-item" data-tab="ads" id="nav-ads">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>Ad Spend</span>
+    </button>
+    <button class="nav-item" data-tab="prices" id="nav-prices">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Price List</span>
+    </button>
+    <button class="nav-item" data-tab="capital" id="nav-capital">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Capital</span>
+    </button>
+    <button class="nav-item" data-tab="expenses" id="nav-expenses">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>Expenses</span>
+    </button>
+    <button class="nav-item" data-tab="summary" id="nav-summary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Summary</span>
+    </button>
+    <button class="nav-item" data-tab="settings" id="nav-settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div id="userAuthWidget" class="user-auth-widget">
+      <div id="userAuthStatus" class="auth-status-text">Cloud Sync: Offline</div>
+      <button id="authBtn" class="btn-ghost-sm" style="margin-top:6px; width:100%; justify-content:center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In to Sync
+      </button>
+    </div>
+    <button class="btn-ghost-sm" id="exportBtn" style="margin-top:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export JSON
+    </button>
+    <label class="btn-ghost-sm" style="cursor:pointer;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import JSON
+      <input type="file" id="importFile" accept=".json" style="display:none;"/>
+    </label>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CONTENT
+════════════════════════════════════════════════════════ -->
+<main class="main-content">
+
+  <!-- ─── MOBILE HEADER ─── -->
+  <header class="mobile-header">
+    <div class="mobile-header-top">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button id="mobileMenuToggle" class="mobile-menu-btn" aria-label="Open Menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div class="mobile-header-brand">
+          <div class="logo-icon">
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+              <rect x="1" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.9"/>
+              <rect x="12" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+              <rect x="1" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+              <rect x="12" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.15"/>
+            </svg>
+          </div>
+          <span class="logo-text">FlipDesk</span>
+        </div>
+      </div>
+      <button id="mobileAuthBtn" class="btn-ghost-sm" style="padding:6px 12px; font-size:12px; border:1px solid var(--border);">
+        Cloud Sync
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── MOBILE DRAWER MENU OVERLAY ─── -->
+  <div class="mobile-drawer-overlay" id="mobileDrawer">
+    <div class="mobile-drawer">
+      <div class="mobile-drawer-header">
+        <div class="mobile-header-brand">
+          <div class="logo-icon">
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+              <rect x="1" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.9"/>
+              <rect x="12" y="1" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+              <rect x="1" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.4"/>
+              <rect x="12" y="12" width="9" height="9" rx="2" fill="#00e676" opacity="0.15"/>
+            </svg>
+          </div>
+          <span class="logo-text">FlipDesk Navigation</span>
+        </div>
+        <button class="modal-close" id="closeMobileDrawer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <nav class="mobile-drawer-nav">
+        <button class="drawer-nav-item active" data-tab="dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="deals">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Deals</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="inventory">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <span>Active Inventory</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="leads">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Leads</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="ads">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Ad Spend</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="prices">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Price List</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="capital">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Capital</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="expenses">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Expenses</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="summary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Summary</span>
+        </button>
+        <button class="drawer-nav-item" data-tab="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings &amp; Account</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       TAB: DASHBOARD
+  ════════════════════════════════════ -->
+  <section class="tab-section active" id="tab-dashboard">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Welcome back. Here is your business snapshot.</p>
+      </div>
+    </div>
+    
+    <div class="kpi-row">
+      <div class="kpi-card primary">
+        <span class="kpi-label">Capital Cash</span>
+        <span class="kpi-value mono" id="dashCapital">S$0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Deals Done</span>
+        <span class="kpi-value mono" id="dashDealsDone">0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">In Progress (Unsold)</span>
+        <span class="kpi-value mono" id="dashDealsUnsold">0</span>
+      </div>
+      <div class="kpi-card danger-card">
+        <span class="kpi-label">Net Profit</span>
+        <span class="kpi-value mono" id="dashNetProfit">S$0</span>
+      </div>
+    </div>
+    
+    <!-- Monthly Target Progress -->
+    <div class="card" style="margin-top:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 class="card-title">Monthly Net Profit Target</h3>
+        <button class="btn-ghost-sm" onclick="editTargetProfit()" style="color:var(--text-2); border:1px solid var(--border);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px; display:inline-block; vertical-align:middle;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span style="vertical-align:middle;">Edit Target</span>
+        </button>
+      </div>
+      <div style="margin-top: 16px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <span class="mono" id="dashTargetProgress" style="font-size:32px; font-weight:700; color:var(--text);">S$0 / S$2,000</span>
+        <span class="mono" id="dashTargetPercent" style="color:var(--accent); font-weight:700;">0%</span>
+      </div>
+      <div style="width: 100%; background: var(--surface-2); height: 8px; border-radius: 4px; margin-top: 12px; overflow: hidden;">
+        <div id="dashTargetBar" style="width: 0%; height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s ease;"></div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-top:24px;">
+      <h3 class="card-title">Quick Actions</h3>
+      <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="document.getElementById('nav-deals').click(); document.getElementById('openDealModal').click();">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Deal
+        </button>
+        <button class="btn-ghost" onclick="document.getElementById('nav-leads').click(); document.getElementById('openLeadModal').click();" style="border:1px solid var(--border);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Lead
+        </button>
+        <button class="btn-ghost" onclick="document.getElementById('nav-capital').click(); document.getElementById('openDepositModal').click();" style="border:1px solid var(--border);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Inject Capital
+        </button>
+        <button class="btn-ghost" onclick="document.getElementById('nav-expenses').click(); document.getElementById('openExpenseModal').click();" style="border:1px solid var(--border);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Log Expense
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: DEALS
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-deals">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Deals</h1>
+        <p class="page-subtitle">Track every buy &amp; sell</p>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn-ghost" id="openCustomOptionModal" style="border:1px solid var(--border); background:var(--surface-2);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Custom Category / Platform
+        </button>
+        <button class="btn-primary" id="openDealModal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Deal
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-grid" id="dealStats">
+      <div class="stat-card">
+        <span class="stat-label">Total Profit</span>
+        <span class="stat-value accent" id="statTotalProfit">S$0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Deals Done</span>
+        <span class="stat-value" id="statDealsCount">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Avg Margin</span>
+        <span class="stat-value" id="statAvgMargin">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Best Flip</span>
+        <span class="stat-value accent" id="statBestFlip">—</span>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <input type="text" class="search-input" id="dealSearch" placeholder="Search devices…"/>
+      <select class="filter-select" id="dealCatFilter">
+        <option value="">All Categories</option>
+        <option value="PS5">PS5</option>
+        <option value="PS4">PS4</option>
+        <option value="Switch">Nintendo Switch</option>
+        <option value="iPhone">iPhone</option>
+        <option value="iPad">iPad</option>
+        <option value="MacBook">MacBook</option>
+        <option value="iMac">iMac</option>
+        <option value="ThinkPad">ThinkPad</option>
+        <option value="Laptop">Laptop</option>
+        <option value="Other">Other</option>
+      </select>
+      <select class="filter-select" id="dealMonthFilter">
+        <option value="">All Time</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="data-table" id="dealsTable">
+        <thead>
+          <tr>
+            <th>Bought Date</th>
+            <th>Sold Date</th>
+            <th>Device</th>
+            <th>Bought (S$)</th>
+            <th>Sold (S$)</th>
+            <th>Profit</th>
+            <th>Margin</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dealsBody">
+        </tbody>
+      </table>
+      <div class="empty-state" id="dealsEmpty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2a2f3e" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <p>No deals yet. Hit <strong>Add Deal</strong> to start tracking.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: INVENTORY
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-inventory">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Active Inventory</h1>
+        <p class="page-subtitle">Devices currently in stock waiting to be sold</p>
+      </div>
+      <button class="btn-primary" onclick="openDealModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Unsold Device
+      </button>
+    </div>
+
+    <!-- Inventory Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Capital Tied Up</span>
+        <span class="stat-value mono" id="invTotalCapital" style="color:var(--warn);">S$0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Items in Stock</span>
+        <span class="stat-value mono" id="invItemsCount">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Est. Target Value</span>
+        <span class="stat-value mono" id="invEstValue" style="color:var(--accent);">S$0</span>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap" style="margin-top:20px;">
+      <table class="data-table" id="inventoryTable">
+        <thead>
+          <tr>
+            <th>Date Bought</th>
+            <th>Days in Stock</th>
+            <th>Device</th>
+            <th>Cost (S$)</th>
+            <th>Condition</th>
+            <th>Notes</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryBody">
+        </tbody>
+      </table>
+      <div class="empty-state" id="inventoryEmpty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2a2f3e" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <p>No unsold inventory in stock. All devices are sold! 🎉</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: LEADS
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-leads">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Leads</h1>
+        <p class="page-subtitle">Buyers &amp; sellers you're talking to</p>
+      </div>
+      <button class="btn-primary" id="openLeadModal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Lead
+      </button>
+    </div>
+
+    <!-- Lead Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Open Leads</span>
+        <span class="stat-value" id="statOpenLeads">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Hot 🔥</span>
+        <span class="stat-value accent" id="statHotLeads">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Closed Won</span>
+        <span class="stat-value" id="statClosedWon">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Closed Lost</span>
+        <span class="stat-value danger" id="statClosedLost">0</span>
+      </div>
+    </div>
+
+    <!-- Lead Kanban -->
+    <div class="kanban-board" id="kanbanBoard">
+      <div class="kanban-col" data-status="new">
+        <div class="kanban-col-header">
+          <span class="kanban-dot new"></span>New
+          <span class="kanban-count" id="kCount-new">0</span>
+        </div>
+        <div class="kanban-cards" id="kCards-new"></div>
+      </div>
+      <div class="kanban-col" data-status="hot">
+        <div class="kanban-col-header">
+          <span class="kanban-dot hot"></span>Hot 🔥
+          <span class="kanban-count" id="kCount-hot">0</span>
+        </div>
+        <div class="kanban-cards" id="kCards-hot"></div>
+      </div>
+      <div class="kanban-col" data-status="negotiating">
+        <div class="kanban-col-header">
+          <span class="kanban-dot negotiating"></span>Negotiating
+          <span class="kanban-count" id="kCount-negotiating">0</span>
+        </div>
+        <div class="kanban-cards" id="kCards-negotiating"></div>
+      </div>
+      <div class="kanban-col" data-status="won">
+        <div class="kanban-col-header">
+          <span class="kanban-dot won"></span>Won ✓
+          <span class="kanban-count" id="kCount-won">0</span>
+        </div>
+        <div class="kanban-cards" id="kCards-won"></div>
+      </div>
+      <div class="kanban-col" data-status="lost">
+        <div class="kanban-col-header">
+          <span class="kanban-dot lost"></span>Lost
+          <span class="kanban-count" id="kCount-lost">0</span>
+        </div>
+        <div class="kanban-cards" id="kCards-lost"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: AD SPEND
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-ads">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Ad Spend</h1>
+        <p class="page-subtitle">Facebook, Carousell &amp; more</p>
+      </div>
+      <button class="btn-primary" id="openAdModalBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Log Ad Spend
+      </button>
+    </div>
+
+    <!-- Ad Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Spent</span>
+        <span class="stat-value danger" id="statTotalAdSpend">S$0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">This Month</span>
+        <span class="stat-value" id="statAdThisMonth">S$0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Meta Ads</span>
+        <span class="stat-value" id="statMetaSpend">S$0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Carousell Boosts</span>
+        <span class="stat-value" id="statCarousellSpend">S$0</span>
+      </div>
+    </div>
+
+    <!-- Platform breakdown bar -->
+    <div class="platform-breakdown card" id="platformBreakdown">
+      <h3 class="card-title">Spend by Platform</h3>
+      <div id="platformBars"></div>
+    </div>
+
+    <!-- Filter bar for ads -->
+    <div class="filter-bar">
+      <input type="text" class="search-input" id="adSearch" placeholder="Search campaigns…"/>
+      <select class="filter-select" id="adPlatformFilter">
+        <option value="">All Platforms</option>
+        <option value="Meta">Meta / Facebook</option>
+        <option value="Carousell">Carousell</option>
+        <option value="Other">Other</option>
+      </select>
+      <select class="filter-select" id="adMonthFilter">
+        <option value="">All Time</option>
+      </select>
+    </div>
+
+    <!-- Ad Table -->
+    <div class="table-wrap">
+      <table class="data-table" id="adsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Platform</th>
+            <th>Campaign / Description</th>
+            <th>Amount (S$)</th>
+            <th>Leads Gen.</th>
+            <th>Deals Linked</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="adsBody"></tbody>
+      </table>
+      <div class="empty-state" id="adsEmpty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2a2f3e" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <p>No ad spend logged yet.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: SUMMARY
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-summary">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Summary</h1>
+        <p class="page-subtitle">Your full business snapshot</p>
+      </div>
+      <select class="filter-select" id="summaryPeriod" style="width:180px;">
+        <option value="all">All Time</option>
+        <option value="this_month">This Month</option>
+        <option value="last_month">Last Month</option>
+        <option value="this_year">This Year</option>
+      </select>
+    </div>
+
+    <!-- Big KPI cards -->
+    <div class="kpi-row">
+      <div class="kpi-card primary">
+        <span class="kpi-label">Net Profit</span>
+        <span class="kpi-value" id="kpiNetProfit">S$0</span>
+        <span class="kpi-sub">(Gross profit − Ads − Exp)</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Gross Profit</span>
+        <span class="kpi-value" id="kpiGrossProfit">S$0</span>
+      </div>
+      <div class="kpi-card danger-card">
+        <span class="kpi-label">Ad Spend</span>
+        <span class="kpi-value" id="kpiAdSpend">S$0</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">ROAS</span>
+        <span class="kpi-value" id="kpiROAS">—</span>
+        <span class="kpi-sub">Revenue ÷ Ad Spend</span>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <!-- Monthly chart -->
+      <div class="card summary-chart-card">
+        <h3 class="card-title">Monthly Profit &amp; Ad Spend</h3>
+        <div class="chart-container" id="monthlyChart"></div>
+      </div>
+
+      <!-- Top devices -->
+      <div class="card">
+        <h3 class="card-title">Top Devices by Profit</h3>
+        <div id="topDevicesList"></div>
+      </div>
+    </div>
+
+    <!-- Detailed breakdown table -->
+    <div class="card" style="margin-top:20px;">
+      <h3 class="card-title">Monthly Breakdown</h3>
+      <table class="data-table" id="summaryTable">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Deals</th>
+            <th>Revenue (Sold)</th>
+            <th>Cost (Bought)</th>
+            <th>Gross Profit</th>
+            <th>Ad Spend</th>
+            <th>Expenses</th>
+            <th>Net Profit</th>
+            <th>Margin %</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: SETTINGS
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-settings">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Settings & Account</h1>
+        <p class="page-subtitle">Manage your account profile, password, and cloud security</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Account Info Card -->
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom:16px;">Account Profile</h3>
+        <div class="form-group">
+          <label class="form-label">Signed In As</label>
+          <input type="text" class="form-input" id="settingsAccountEmail" value="Not signed in" readonly style="opacity:0.8; background:var(--surface-2);"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cloud Sync Status</label>
+          <input type="text" class="form-input" id="settingsSyncStatus" value="Offline" readonly style="opacity:0.8; background:var(--surface-2); color:var(--accent);"/>
+        </div>
+        <div style="margin-top:16px;">
+          <button type="button" id="settingsSignOutBtn" class="btn-primary" style="background:var(--danger); color:#fff; width:100%;">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Security / Password Card -->
+      <div class="card">
+        <h3 class="card-title" id="settingsSecurityTitle" style="margin-bottom:16px;">Security & Password</h3>
+        <p id="settingsSecurityDesc" style="font-size:13px; color:var(--text-2); margin-bottom:16px;">Change your password or trigger a reset email.</p>
+        
+        <form id="settingsPasswordForm" onsubmit="return false;" style="display:flex; flex-direction:column; gap:12px;">
+          <div class="form-group" id="groupNewPassword">
+            <label class="form-label" id="labelNewPassword">New Password</label>
+            <input type="password" class="form-input" id="settingsNewPassword" placeholder="Enter new password (min 6 chars)" minlength="6"/>
+          </div>
+          <div class="form-group" id="groupConfirmPassword">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" class="form-input" id="settingsConfirmPassword" placeholder="Re-enter new password" minlength="6"/>
+          </div>
+          <button type="button" id="settingsChangePasswordBtn" class="btn-primary">Update Password</button>
+          
+          <div id="groupResetEmailLink" style="border-top:1px solid var(--border); padding-top:12px; margin-top:4px;">
+            <button type="button" id="settingsSendResetEmailBtn" class="btn-ghost-sm" style="color:var(--text-2); width:100%; justify-content:center;">Send Password Reset Link to Email</button>
+          </div>
+        </form>
+        
+        <p id="settingsMsg" class="lock-error" style="display:none; margin-top:12px; margin-bottom:0;"></p>
+      </div>
+    <!-- Feedback & Bug Report Card -->
+    <div class="card" style="margin-top:20px;">
+      <h3 class="card-title" style="margin-bottom:12px;">💬 Community Feedback & Bug Reports</h3>
+      <p style="font-size:13px; color:var(--text-2); margin-bottom:16px;">Found a bug or have a feature request to make FlipDesk better? Let us know directly below!</p>
+      
+      <form id="feedbackForm" onsubmit="return false;" style="display:flex; flex-direction:column; gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Feedback Type</label>
+          <select class="form-input" id="feedbackType">
+            <option value="Bug Report">🐛 Bug Report</option>
+            <option value="Feature Request">💡 Feature Request</option>
+            <option value="General Feedback">💬 General Feedback</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message / Bug Details</label>
+          <textarea class="form-input" id="feedbackMessage" rows="3" placeholder="Describe what happened or what feature you'd like to see…" required></textarea>
+        </div>
+        <button type="button" id="sendFeedbackBtn" onclick="submitFeedback()" class="btn-primary" style="justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send Feedback
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: PRICE LIST
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-prices">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Price List</h1>
+        <p class="page-subtitle">Your master list of target buyback prices</p>
+      </div>
+      <button class="btn-primary" id="openPriceModal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Item
+      </button>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <input type="text" class="search-input" id="priceSearch" placeholder="Search devices…"/>
+      <select class="filter-select" id="priceCatFilter">
+        <option value="">All Categories</option>
+        <option value="PS5">PS5</option>
+        <option value="PS4">PS4</option>
+        <option value="Switch">Nintendo Switch</option>
+        <option value="iPhone">iPhone</option>
+        <option value="iPad">iPad</option>
+        <option value="MacBook">MacBook</option>
+        <option value="Laptop">Laptop</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="data-table" id="pricesTable">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Device Name</th>
+            <th>Target Buy (S$)</th>
+            <th>Market Sell (S$)</th>
+            <th>Est. Margin</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pricesBody"></tbody>
+      </table>
+      <div class="empty-state" id="pricesEmpty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2a2f3e" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <p>No prices added yet. Hit <strong>Add Item</strong> to start building your price list.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: CAPITAL
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-capital">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Capital</h1>
+        <p class="page-subtitle">Track your dedicated business funds</p>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn-ghost-sm" id="openWithdrawModal" style="color:var(--text);border-color:var(--border);">
+          Pay Myself
+        </button>
+        <button class="btn-primary" id="openDepositModal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Inject Capital
+        </button>
+      </div>
+    </div>
+
+    <!-- Capital KPI -->
+    <div class="kpi-row">
+      <div class="kpi-card primary" style="flex:1;">
+        <span class="kpi-label">Current Available Cash</span>
+        <span class="kpi-value" id="kpiCurrentCash" style="font-size:36px;margin:8px 0;">S$0</span>
+        <span class="kpi-sub" style="opacity:0.8;">Deposits − Withdrawals − Unsold Deals + Sold Deals − Ad Spend</span>
+      </div>
+    </div>
+
+    <!-- Capital Ledger -->
+    <div class="card" style="margin-top:24px;">
+      <h3 class="card-title">Transaction History</h3>
+      <div class="table-wrap">
+        <table class="data-table" id="capitalTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Amount (S$)</th>
+              <th>Balance (S$)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="capitalBody"></tbody>
+        </table>
+        <div class="empty-state" id="capitalEmpty" style="display:none;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2a2f3e" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <p>No transactions yet. Click <strong>Inject Capital</strong> to add your initial funds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       TAB: EXPENSES
+  ════════════════════════════════════ -->
+  <section class="tab-section" id="tab-expenses">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Expenses</h1>
+        <p class="page-subtitle">Track AI subs, transport, and other costs</p>
+      </div>
+      <button class="btn-primary" id="openExpenseModal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Log Expense
+      </button>
+    </div>
+
+    <!-- Expense Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Expenses</span>
+        <span class="stat-value danger" id="statTotalExpenses">S$0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">This Month</span>
+        <span class="stat-value" id="statExpenseThisMonth">S$0</span>
+      </div>
+    </div>
+
+    <!-- Expenses Table -->
+    <div class="table-wrap" style="margin-top:24px;">
+      <table class="data-table" id="expensesTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Amount (S$)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="expensesBody"></tbody>
+      </table>
+      <div class="empty-state" id="expensesEmpty" style="display:none;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2a2f3e" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <p>No expenses logged yet. Keep it lean!</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: TARGET PROFIT
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="targetModal">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-header">
+      <h2 id="targetModalTitle">Set Monthly Target</h2>
+      <button type="button" class="modal-close" id="closeTargetModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="targetForm">
+      <div class="form-group">
+        <label class="form-label">Monthly Net Profit Target (S$)</label>
+        <input type="number" class="form-input" id="targetInput" placeholder="e.g. 2000" min="1" required/>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelTargetModal">Cancel</button>
+        <button type="submit" class="btn-primary">Save Target</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: ADD / EDIT DEAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="dealModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="dealModalTitle">Add Deal</h2>
+      <button class="modal-close" id="closeDealModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="dealForm">
+      <input type="hidden" id="dealId"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date Bought</label>
+          <input type="date" class="form-input" id="dealDate" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date Sold (optional)</label>
+          <input type="date" class="form-input" id="dealSoldDate"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="dealCategory" required>
+            <option value="">Select category…</option>
+            <optgroup label="Consoles">
+              <option>PS5</option>
+              <option>PS4</option>
+              <option>Nintendo Switch</option>
+            </optgroup>
+            <optgroup label="iPhones">
+              <option>iPhone 16 Pro Max</option>
+              <option>iPhone 16 Pro</option>
+              <option>iPhone 16 Plus</option>
+              <option>iPhone 16</option>
+              <option>iPhone 15 Pro Max</option>
+              <option>iPhone 15 Pro</option>
+              <option>iPhone 15 Plus</option>
+              <option>iPhone 15</option>
+              <option>iPhone 14 Pro Max</option>
+              <option>iPhone 14 Pro</option>
+              <option>iPhone 14 Plus</option>
+              <option>iPhone 14</option>
+              <option>iPhone 13 Pro Max</option>
+              <option>iPhone 13 Pro</option>
+              <option>iPhone 13</option>
+              <option>iPhone 13 Mini</option>
+              <option>iPhone 12 Pro Max</option>
+              <option>iPhone 12 Pro</option>
+              <option>iPhone 12</option>
+              <option>iPhone 12 Mini</option>
+              <option>iPhone SE (3rd Gen)</option>
+            </optgroup>
+            <optgroup label="iPads">
+              <option>iPad Pro 13"</option>
+              <option>iPad Pro 11"</option>
+              <option>iPad Air</option>
+              <option>iPad Mini</option>
+              <option>iPad (standard)</option>
+            </optgroup>
+            <optgroup label="MacBooks">
+              <option>MacBook Pro 16"</option>
+              <option>MacBook Pro 14"</option>
+              <option>MacBook Air 15"</option>
+              <option>MacBook Air 13"</option>
+            </optgroup>
+            <optgroup label="iMac / Desktop">
+              <option>iMac 24"</option>
+              <option>Mac Mini</option>
+              <option>Mac Studio</option>
+            </optgroup>
+            <optgroup label="ThinkPads">
+              <option>ThinkPad X1 Carbon</option>
+              <option>ThinkPad T Series</option>
+              <option>ThinkPad E Series</option>
+              <option>ThinkPad L Series</option>
+            </optgroup>
+            <optgroup label="Other Laptops">
+              <option>Dell XPS</option>
+              <option>ASUS ROG</option>
+              <option>HP Spectre</option>
+              <option>Surface Laptop</option>
+              <option>Other Laptop</option>
+            </optgroup>
+            <option value="Other">Other</option>
+          </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Device Description</label>
+        <input type="text" class="form-input" id="dealDevice" placeholder="e.g. PS5 Slim Disc 1TB — Good condition" required/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Bought (S$)</label>
+          <input type="number" class="form-input" id="dealBought" placeholder="e.g. 400" min="0" step="0.01" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sold (S$)</label>
+          <input type="number" class="form-input" id="dealSold" placeholder="e.g. 480" min="0" step="0.01"/>
+        </div>
+      </div>
+      <!-- Live profit preview -->
+      <div class="profit-preview" id="dealProfitPreview" style="display:none;">
+        Profit: <strong id="previewProfit">—</strong> &nbsp;|&nbsp; Margin: <strong id="previewMargin">—</strong>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Condition</label>
+          <select class="form-input" id="dealCondition">
+            <option value="">—</option>
+            <option>New / Sealed</option>
+            <option>Like New</option>
+            <option>Good</option>
+            <option>Fair</option>
+            <option>For Parts</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Platform Sold On</label>
+          <select class="form-input" id="dealPlatform">
+            <option value="">—</option>
+            <option>Carousell</option>
+            <option>Facebook Marketplace</option>
+            <option>In-person</option>
+            <option>Own Website</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <textarea class="form-input" id="dealNotes" rows="2" placeholder="e.g. Bought from Tampines, sold same day"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelDealModal">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveDealBtn">Save Deal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: ADD CUSTOM CATEGORY / PLATFORM
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="customOptionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Custom Category or Platform</h2>
+      <button class="modal-close" id="closeCustomOptionModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="customOptionForm">
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="customOptionType" required>
+          <option value="category">Category (Device / Model)</option>
+          <option value="platform">Platform (Sales Channel)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Custom Name</label>
+        <input type="text" class="form-input" id="customOptionValue" placeholder="e.g. Steam Deck, JB Store (Desmond), TikTok Shop" required/>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelCustomOptionModal">Cancel</button>
+        <button type="submit" class="btn-primary">Add Custom Option</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: ADD / EDIT LEAD
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="leadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="leadModalTitle">Add Lead</h2>
+      <button class="modal-close" id="closeLeadModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="leadForm">
+      <input type="hidden" id="leadId"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Contact Name</label>
+          <input type="text" class="form-input" id="leadName" placeholder="e.g. John (Carousell)" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-input" id="leadType">
+            <option value="Buyer">Buyer</option>
+            <option value="Seller">Seller</option>
+            <option value="Both">Both</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Device of Interest</label>
+        <input type="text" class="form-input" id="leadDevice" placeholder="e.g. iPhone 15 Pro Max 256GB" required/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Asking / Offering (S$)</label>
+          <input type="number" class="form-input" id="leadPrice" placeholder="e.g. 900" min="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your Target (S$)</label>
+          <input type="number" class="form-input" id="leadTarget" placeholder="e.g. 850" min="0"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Source</label>
+          <select class="form-input" id="leadSource">
+            <option value="">—</option>
+            <option>Carousell</option>
+            <option>Facebook Marketplace</option>
+            <option>Facebook Ad</option>
+            <option>Walk-in</option>
+            <option>Referral</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-input" id="leadStatus">
+            <option value="new">New</option>
+            <option value="hot">Hot 🔥</option>
+            <option value="negotiating">Negotiating</option>
+            <option value="won">Won ✓</option>
+            <option value="lost">Lost</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-input" id="leadNotes" rows="2" placeholder="e.g. Will meet Tampines MRT, flexible on price"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelLeadModal">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveLeadBtn">Save Lead</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: LOG AD SPEND
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="adModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="adModalTitle">Log Ad Spend</h2>
+      <button class="modal-close" id="closeAdModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="adForm">
+      <input type="hidden" id="adId"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="adDate" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Platform</label>
+          <select class="form-input" id="adPlatform" required>
+            <option value="">Select platform…</option>
+            <option value="Meta">Meta / Facebook Ads</option>
+            <option value="Carousell">Carousell Boost</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Campaign / Description</label>
+        <input type="text" class="form-input" id="adCampaign" placeholder="e.g. iPhone listing boost — June" required/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Amount Spent (S$)</label>
+          <input type="number" class="form-input" id="adAmount" placeholder="e.g. 25" min="0" step="0.01" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Leads Generated</label>
+          <input type="number" class="form-input" id="adLeads" placeholder="e.g. 4" min="0"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deals Linked (optional)</label>
+        <input type="text" class="form-input" id="adDealsLinked" placeholder="e.g. 2 deals from this campaign"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-input" id="adNotes" rows="2" placeholder="e.g. Ran for 3 days, good CTR on PS5 listing"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelAdModal">Cancel</button>
+        <button type="submit" class="btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: ADD / EDIT PRICE
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="priceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="priceModalTitle">Add to Price List</h2>
+      <button class="modal-close" id="closePriceModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="priceForm">
+      <input type="hidden" id="priceId"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-input" id="priceCategory" required>
+            <option value="">Select category…</option>
+            <option>PS5</option>
+            <option>PS4</option>
+            <option>Nintendo Switch</option>
+            <option>iPhone</option>
+            <option>iPad</option>
+            <option>MacBook</option>
+            <option>Laptop</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Device Name</label>
+          <input type="text" class="form-input" id="priceDevice" placeholder="e.g. iPhone 15 Pro 128GB" required/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Target Buy (S$)</label>
+          <input type="number" class="form-input" id="priceBuy" placeholder="e.g. 800" min="0" step="0.01" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Est. Market Sell (S$)</label>
+          <input type="number" class="form-input" id="priceSell" placeholder="e.g. 950" min="0" step="0.01" required/>
+        </div>
+      </div>
+      <!-- Live margin preview -->
+      <div class="profit-preview" id="priceProfitPreview" style="display:none;">
+        Est. Profit: <strong id="pricePreviewProfit">—</strong> &nbsp;|&nbsp; Margin: <strong id="pricePreviewMargin">—</strong>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes / Specs</label>
+        <textarea class="form-input" id="priceNotes" rows="2" placeholder="e.g. Deduct $50 if no box"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelPriceModal">Cancel</button>
+        <button type="submit" class="btn-primary">Save Price</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: ADD/WITHDRAW CAPITAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="capitalModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="capitalModalTitle">Capital Transaction</h2>
+      <button class="modal-close" id="closeCapitalModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="capitalForm">
+      <input type="hidden" id="capitalId"/>
+      <input type="hidden" id="capitalType" value="deposit"/>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="capitalDate" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (S$)</label>
+          <input type="number" class="form-input" id="capitalAmount" placeholder="e.g. 350" min="0" step="0.01" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description / Notes</label>
+        <input type="text" class="form-input" id="capitalNotes" placeholder="e.g. Initial seed money"/>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelCapitalModal">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveCapitalBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: LOG EXPENSE
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="expenseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="expenseModalTitle">Log Expense</h2>
+      <button class="modal-close" id="closeExpenseModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="expenseForm">
+      <input type="hidden" id="expenseId"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="expenseDate" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (S$)</label>
+          <input type="number" class="form-input" id="expenseAmount" placeholder="e.g. 30" min="0" step="0.01" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="expenseCategory" required>
+          <option value="">Select category…</option>
+          <option value="Software / AI">Software / AI (e.g. ChatGPT, Gemini)</option>
+          <option value="Transport">Transport / Delivery (e.g. Grab, Lalamove)</option>
+          <option value="Packaging">Packaging</option>
+          <option value="Repair Parts">Repair Parts</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description / Notes</label>
+        <input type="text" class="form-input" id="expenseNotes" placeholder="e.g. Gemini Advanced Monthly"/>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost-modal" id="cancelExpenseModal">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveExpenseBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete confirm -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h2>Delete Entry</h2>
+      <button class="modal-close" id="closeDeleteModal">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="color:var(--text-2);margin:16px 0 24px;">Are you sure you want to delete this entry? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-ghost-modal" id="cancelDeleteModal">Cancel</button>
+      <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+
+<!-- Bulletproof ad-modal wiring: no global-scope dependency -->
+<script>
+(function() {
+  function todayVal() {
+    return new Date().toISOString().split('T')[0];
+  }
+  function showAdModal(ad) {
+    var m = document.getElementById('adModal');
+    document.getElementById('adModalTitle').textContent = ad ? 'Edit Ad Spend' : 'Log Ad Spend';
+    document.getElementById('adId').value        = ad ? (ad.id       || '') : '';
+    document.getElementById('adDate').value      = ad ? (ad.date     || todayVal()) : todayVal();
+    document.getElementById('adPlatform').value  = ad ? (ad.platform || '') : '';
+    document.getElementById('adCampaign').value  = ad ? (ad.campaign || '') : '';
+    document.getElementById('adAmount').value    = ad ? (ad.amount   || '') : '';
+    document.getElementById('adLeads').value     = ad ? (ad.leadsGen || '') : '';
+    document.getElementById('adDealsLinked').value = ad ? (ad.dealsLinked || '') : '';
+    document.getElementById('adNotes').value     = ad ? (ad.notes    || '') : '';
+    m.classList.add('open');
+  }
+  function hideAdModal() {
+    document.getElementById('adModal').classList.remove('open');
+  }
+  // Override globals so editAd rows also use this
+  window.openAdModal  = showAdModal;
+  window.closeAdModal = hideAdModal;
+  window.editAd = function(id) {
+    try {
+      var ads = JSON.parse(localStorage.getItem('flipAds') || '[]');
+      var ad = ads.find(function(a) { return a && a.id === id; });
+      showAdModal(ad || null);
+    } catch(e) { showAdModal(null); }
+  };
+  document.getElementById('openAdModalBtn').addEventListener('click', function() { showAdModal(null); });
+  document.getElementById('closeAdModal').addEventListener('click', hideAdModal);
+  document.getElementById('cancelAdModal').addEventListener('click', hideAdModal);
+  document.getElementById('adModal').addEventListener('click', function(e) {
+    if (e.target === e.currentTarget) hideAdModal();
+  });
+})();
+</script>
+</body>
+</html>
